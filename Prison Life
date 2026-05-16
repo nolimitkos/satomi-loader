@@ -5,6 +5,10 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
+if game.PlaceId ~= 155615604 then
+    return
+end
+
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Camera = Workspace.CurrentCamera
@@ -16,11 +20,20 @@ local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 local savedPosition = nil
 local meleeAuraEnabled = false
 local antiTaseEnabled = false
+local antiArrestEnabled = false
 local auraConnection = nil
+local arrestConnection = nil
+local ammoConnection = nil
+local collectConnection = nil
 
 local AURA_WHITELIST = {
     [10832085518] = true,
     [8616490754] = true,
+}
+
+local ARREST_WHITELIST = {
+    ["ikoszx"] = true,
+    ["ketenimwryy"] = true,
 }
 
 local function IsAuraWhitelisted(userId)
@@ -245,8 +258,8 @@ local function OpenMainGui()
     MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
     MainFrame.BackgroundTransparency = 1
     TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 220, 0, 238),
-        Position = UDim2.new(0.5, -110, 0.5, -119),
+        Size = UDim2.new(0, 220, 0, 272),
+        Position = UDim2.new(0.5, -110, 0.5, -136),
         BackgroundTransparency = 0.15
     }):Play()
 end
@@ -306,15 +319,15 @@ Divider.Parent = MainFrame
 
 local ContentContainer = Instance.new("Frame")
 ContentContainer.Name = "ContentContainer"
-ContentContainer.Size = UDim2.new(0.85, 0, 0, 126)
+ContentContainer.Size = UDim2.new(0.85, 0, 0, 160)
 ContentContainer.Position = UDim2.new(0.075, 0, 0, 68)
 ContentContainer.BackgroundTransparency = 1
 ContentContainer.BorderSizePixel = 0
 ContentContainer.Parent = MainFrame
 
 local openTween = TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-    Size = UDim2.new(0, 220, 0, 238),
-    Position = UDim2.new(0.5, -110, 0.5, -119),
+    Size = UDim2.new(0, 220, 0, 272),
+    Position = UDim2.new(0.5, -110, 0.5, -136),
     BackgroundTransparency = 0.15
 })
 openTween:Play()
@@ -619,6 +632,104 @@ local function EnableAntiTase()
     end)
 end
 
+local function EnableAntiArrest()
+    local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+    local OriginalArrest = Remotes:WaitForChild("ArrestPlayer")
+
+    local Dummy = Instance.new("RemoteFunction")
+    Dummy.Name = "ArrestPlayer_Backup"
+    Dummy.Parent = Remotes
+
+    Dummy.OnClientInvoke = function() end
+
+    OriginalArrest:Destroy()
+
+    arrestConnection = RunService.Heartbeat:Connect(function()
+        local Current = Remotes:FindFirstChild("ArrestPlayer")
+        if not Current then
+            local New = Instance.new("RemoteFunction")
+            New.Name = "ArrestPlayer"
+            New.Parent = Remotes
+            New.OnClientInvoke = function(target, type)
+                if typeof(target) == "Instance" and target:IsA("Player") then
+                    if ARREST_WHITELIST[target.Name] then
+                        return nil
+                    end
+                end
+                return Dummy:InvokeServer(target, type)
+            end
+        end
+    end)
+end
+
+local function DisableAntiArrest()
+    if arrestConnection then
+        arrestConnection:Disconnect()
+        arrestConnection = nil
+    end
+end
+
+local function StartAutoRefill()
+    ammoConnection = RunService.Heartbeat:Connect(function()
+        if not antiArrestEnabled then return end
+        local success, err = pcall(function()
+            local args = {
+                workspace:WaitForChild("Prison_ITEMS"):WaitForChild("giver"):WaitForChild("M700"):WaitForChild("model2")
+            }
+            ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("InteractWithItem"):InvokeServer(unpack(args))
+        end)
+    end)
+end
+
+local function StopAutoRefill()
+    if ammoConnection then
+        ammoConnection:Disconnect()
+        ammoConnection = nil
+    end
+end
+
+local function StartAutoCollect()
+    collectConnection = RunService.Heartbeat:Connect(function()
+        if not antiArrestEnabled then return end
+        local success, err = pcall(function()
+            local items = workspace:FindFirstChild("Prison_ITEMS")
+            if not items then return end
+            for _, item in ipairs(items:GetDescendants()) do
+                if item:IsA("Model") and item.Name:lower():find("keycard") then
+                    local primary = item:FindFirstChildWhichIsA("BasePart") or item:FindFirstChildWhichIsA("MeshPart")
+                    if primary then
+                        local distance = (HumanoidRootPart.Position - primary.Position).Magnitude
+                        if distance <= 20 then
+                            local args = {
+                                item
+                            }
+                            ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("GiverPressed"):FireServer(unpack(args))
+                        end
+                    end
+                end
+            end
+        end)
+    end)
+end
+
+local function StopAutoCollect()
+    if collectConnection then
+        collectConnection:Disconnect()
+        collectConnection = nil
+    end
+end
+
+CreateToggle("Melee-Aura", 0, function(enabled)
+    meleeAuraEnabled = enabled
+    if enabled then
+        StartMeleeAura()
+        ShowNotification("Melee-Aura", "Aura enabled - closest target", 3)
+    else
+        StopMeleeAura()
+        ShowNotification("Melee-Aura", "Aura disabled", 3)
+    end
+end)
+
 CreateToggle("Anti Tase", 38, function(enabled)
     antiTaseEnabled = enabled
     if enabled then
@@ -629,14 +740,18 @@ CreateToggle("Anti Tase", 38, function(enabled)
     end
 end)
 
-CreateToggle("Melee-Aura", 0, function(enabled)
-    meleeAuraEnabled = enabled
+CreateToggle("Anti Arrest", 76, function(enabled)
+    antiArrestEnabled = enabled
     if enabled then
-        StartMeleeAura()
-        ShowNotification("Melee-Aura", "Aura enabled - closest target", 3)
+        EnableAntiArrest()
+        StartAutoRefill()
+        StartAutoCollect()
+        ShowNotification("Anti Arrest", "Protection + Auto features enabled", 3)
     else
-        StopMeleeAura()
-        ShowNotification("Melee-Aura", "Aura disabled", 3)
+        DisableAntiArrest()
+        StopAutoRefill()
+        StopAutoCollect()
+        ShowNotification("Anti Arrest", "Rejoin to disable fully", 3)
     end
 end)
 
@@ -730,7 +845,7 @@ local function CreateShimmerButton(name, positionY)
     return ButtonFrame
 end
 
-local NeutralZoneButton = CreateShimmerButton("Neutral Zone", 80)
+local NeutralZoneButton = CreateShimmerButton("Neutral Zone", 118)
 
 NeutralZoneButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
