@@ -68,6 +68,11 @@ local AUTO_COLLECT_ITEMS = {
        remote = "InteractWithItem",
        fireType = "InvokeServer",
    },
+   {
+       path = {"Prison_ITEMS", "giver", "FAL", "Smooth Block Model"},
+       remote = "InteractWithItem",
+       fireType = "InvokeServer",
+   },
 }
 
 local function IsAuraWhitelisted(userId)
