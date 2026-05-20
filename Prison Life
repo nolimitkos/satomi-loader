@@ -151,14 +151,28 @@ local function getEquippedTool()
     return char:FindFirstChildOfClass("Tool")
 end
 
-local function getEquippedGunName()
+local function hasAnyGunEquipped()
     local tool = getEquippedTool()
-    if not tool then return nil end
+    if not tool then return false end
     local name = tool.Name
-    if name == "Remington 870" or name == "M9" or name == "AK-47" or name == "M4A1" or name == "MP5" or name == "FAL" or name == "C4" then
-        return name
-    end
-    return nil
+    local guns = {
+        ["Remington 870"] = true,
+        ["M9"] = true,
+        ["AK-47"] = true,
+        ["M4A1"] = true,
+        ["MP5"] = true,
+        ["FAL"] = true,
+        ["C4"] = true,
+        ["M700"] = true,
+        ["Revolver"] = true,
+    }
+    return guns[name] == true
+end
+
+local function hasM700Equipped()
+    local tool = getEquippedTool()
+    if not tool then return false end
+    return tool.Name == "M700"
 end
 
 local function isNearCoordinates(pos, target, range)
@@ -179,14 +193,12 @@ local AUTO_COLLECT_ITEMS = {
        path = {"Prison_ITEMS", "giver", "M700", "model1"},
        remote = "InteractWithItem",
        fireType = "InvokeServer",
-       isAmmo = true,
        equipRequired = "M700",
    },
    {
        path = {"Prison_ITEMS", "giver", "M700", "model2"},
        remote = "InteractWithItem",
        fireType = "InvokeServer",
-       isAmmo = true,
        equipRequired = "M700",
    },
    {
@@ -199,16 +211,12 @@ local AUTO_COLLECT_ITEMS = {
        remote = "InteractWithItem",
        fireType = "InvokeServer",
        skipIfGunEquipped = true,
-       skipZone = Vector3.new(825.290, 98.000, 2222.277),
-       skipRange = 25,
    },
    {
        path = {"Prison_ITEMS", "giver", "MP5", "Meshes/MP5 (2)"},
        remote = "InteractWithItem",
        fireType = "InvokeServer",
        skipIfGunEquipped = true,
-       skipZone = Vector3.new(825.290, 98.000, 2222.277),
-       skipRange = 25,
    },
    {
        path = {"Prison_ITEMS", "giver", "C4 Explosive", "Explosive"},
@@ -238,19 +246,18 @@ local AUTO_COLLECT_ITEMS = {
 }
 
 local function AutoCollectLoop()
-   local equippedGun = getEquippedGunName()
+   local anyGunEquipped = hasAnyGunEquipped()
+   local m700Equipped = hasM700Equipped()
    local playerPos = getPlayerPosition()
 
    for _, itemData in ipairs(AUTO_COLLECT_ITEMS) do
        pcall(function()
-           if itemData.skipIfGunEquipped and equippedGun and playerPos and itemData.skipZone then
-               if isNearCoordinates(playerPos, itemData.skipZone, itemData.skipRange) then
-                   return
-               end
+           if itemData.skipIfGunEquipped and anyGunEquipped then
+               return
            end
 
            if itemData.equipRequired then
-               if equippedGun ~= itemData.equipRequired then
+               if not m700Equipped then
                    return
                end
            end
