@@ -27,24 +27,151 @@ local AURA_WHITELIST = {
    [8616490754] = true,
 }
 
-local GUN_NAMES = {
-   ["M9"] = true,
-   ["M700"] = true,
-   ["AK-47"] = true,
-   ["Remington 870"] = true,
-   ["MP5"] = true,
-   ["FAL"] = true,
-   ["Revolver"] = true,
-   ["C4 Explosive"] = true,
-   ["Taser"] = true,
-}
+local korbloxMesh = "101851696"
+local korbloxTexture = "101851254"
 
-local function HasGunEquipped()
-   local tool = Character:FindFirstChildWhichIsA("Tool")
-   if tool and GUN_NAMES[tool.Name] then
-       return true
-   end
-   return false
+local function IsAuraWhitelisted(userId)
+   return AURA_WHITELIST[userId] == true
+end
+
+local function applyKorblox(character)
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.RigType ~= Enum.HumanoidRigType.R6 then
+        return
+    end
+    local leg = character:FindFirstChild("Right Leg")
+    if not leg then
+        return
+    end
+    local fakeLeg = character:FindFirstChild("FakeKorbloxLeg")
+    if fakeLeg then
+        fakeLeg:Destroy()
+    end
+    leg.Transparency = 1
+    local part = Instance.new("Part")
+    part.Name = "FakeKorbloxLeg"
+    part.Size = leg.Size
+    part.CFrame = leg.CFrame
+    part.Anchored = false
+    part.CanCollide = false
+    part.Material = Enum.Material.Plastic
+    part.BrickColor = BrickColor.new("Really black")
+    local mesh = Instance.new("SpecialMesh")
+    mesh.MeshType = Enum.MeshType.FileMesh
+    mesh.MeshId = "rbxassetid://" .. korbloxMesh
+    mesh.TextureId = "rbxassetid://" .. korbloxTexture
+    mesh.Parent = part
+    part.Parent = character
+    local weld = Instance.new("WeldConstraint")
+    weld.Part0 = leg
+    weld.Part1 = part
+    weld.Parent = part
+end
+
+local function applyHeadless(character)
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.RigType ~= Enum.HumanoidRigType.R6 then
+        return
+    end
+    local head = character:FindFirstChild("Head")
+    if not head then
+        return
+    end
+    head.Transparency = 1
+    for _, child in pairs(head:GetChildren()) do
+        if child:IsA("Decal") or child:IsA("Texture") then
+            child:Destroy()
+        end
+    end
+    local face = head:FindFirstChild("face")
+    if face then
+        face:Destroy()
+    end
+end
+
+local function applyFakeItems(character)
+    applyKorblox(character)
+    applyHeadless(character)
+end
+
+local function onCharacterAdded(char)
+    char:WaitForChild("Humanoid")
+    task.wait(1)
+    applyFakeItems(char)
+end
+
+if LocalPlayer.Character then
+    task.spawn(onCharacterAdded, LocalPlayer.Character)
+end
+
+LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
+
+local function setupFakeItemsForWhitelisted()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if IsAuraWhitelisted(player.UserId) and player.Character and player ~= LocalPlayer then
+            player.CharacterAdded:Connect(function(char)
+                if IsAuraWhitelisted(player.UserId) then
+                    char:WaitForChild("Humanoid")
+                    task.wait(1)
+                    applyFakeItems(LocalPlayer.Character)
+                end
+            end)
+        end
+        player.CharacterAdded:Connect(function(char)
+            if IsAuraWhitelisted(player.UserId) and player ~= LocalPlayer then
+                char:WaitForChild("Humanoid")
+                task.wait(1)
+                applyFakeItems(LocalPlayer.Character)
+            end
+        end)
+    end
+    Players.PlayerAdded:Connect(function(player)
+        if IsAuraWhitelisted(player.UserId) and player ~= LocalPlayer then
+            player.CharacterAdded:Connect(function(char)
+                char:WaitForChild("Humanoid")
+                task.wait(1)
+                applyFakeItems(LocalPlayer.Character)
+            end)
+            if player.Character then
+                task.spawn(function()
+                    player.Character:WaitForChild("Humanoid")
+                    task.wait(1)
+                    applyFakeItems(LocalPlayer.Character)
+                end)
+            end
+        end
+    end)
+end
+
+setupFakeItemsForWhitelisted()
+
+local function getEquippedTool()
+    local char = LocalPlayer.Character
+    if not char then return nil end
+    return char:FindFirstChildOfClass("Tool")
+end
+
+local function getEquippedGunName()
+    local tool = getEquippedTool()
+    if not tool then return nil end
+    local name = tool.Name
+    if name == "Remington 870" or name == "M9" or name == "AK-47" or name == "M4A1" or name == "MP5" or name == "FAL" or name == "C4" then
+        return name
+    end
+    return nil
+end
+
+local function isNearCoordinates(pos, target, range)
+    range = range or 15
+    return (pos - target).Magnitude <= range
+end
+
+local function getPlayerPosition()
+    local char = LocalPlayer.Character
+    if not char then return nil end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return nil end
+    return hrp.Position
 end
 
 local AUTO_COLLECT_ITEMS = {
@@ -52,11 +179,15 @@ local AUTO_COLLECT_ITEMS = {
        path = {"Prison_ITEMS", "giver", "M700", "model1"},
        remote = "InteractWithItem",
        fireType = "InvokeServer",
+       isAmmo = true,
+       equipRequired = "M700",
    },
    {
        path = {"Prison_ITEMS", "giver", "M700", "model2"},
        remote = "InteractWithItem",
        fireType = "InvokeServer",
+       isAmmo = true,
+       equipRequired = "M700",
    },
    {
        path = {"Prison_ITEMS", "giver", "AK-47", "Meshes/AK47_7"},
@@ -68,20 +199,19 @@ local AUTO_COLLECT_ITEMS = {
        remote = "InteractWithItem",
        fireType = "InvokeServer",
        skipIfGunEquipped = true,
+       skipZone = Vector3.new(825.290, 98.000, 2222.277),
+       skipRange = 25,
    },
    {
        path = {"Prison_ITEMS", "giver", "MP5", "Meshes/MP5 (2)"},
        remote = "InteractWithItem",
        fireType = "InvokeServer",
        skipIfGunEquipped = true,
+       skipZone = Vector3.new(825.290, 98.000, 2222.277),
+       skipRange = 25,
    },
    {
        path = {"Prison_ITEMS", "giver", "C4 Explosive", "Explosive"},
-       remote = "InteractWithItem",
-       fireType = "InvokeServer",
-   },
-   {
-       path = {"Prison_ITEMS", "giver", "Revolver", "Meshes/revolver (3)"},
        remote = "InteractWithItem",
        fireType = "InvokeServer",
    },
@@ -107,16 +237,24 @@ local AUTO_COLLECT_ITEMS = {
    },
 }
 
-local function IsAuraWhitelisted(userId)
-   return AURA_WHITELIST[userId] == true
-end
-
 local function AutoCollectLoop()
+   local equippedGun = getEquippedGunName()
+   local playerPos = getPlayerPosition()
+
    for _, itemData in ipairs(AUTO_COLLECT_ITEMS) do
-       if itemData.skipIfGunEquipped and HasGunEquipped() then
-           continue
-       end
        pcall(function()
+           if itemData.skipIfGunEquipped and equippedGun and playerPos and itemData.skipZone then
+               if isNearCoordinates(playerPos, itemData.skipZone, itemData.skipRange) then
+                   return
+               end
+           end
+
+           if itemData.equipRequired then
+               if equippedGun ~= itemData.equipRequired then
+                   return
+               end
+           end
+
            local current = Workspace
            for _, pathPart in ipairs(itemData.path) do
                current = current:FindFirstChild(pathPart)
@@ -846,7 +984,12 @@ NeutralZoneButton.InputBegan:Connect(function(input)
            savedPosition = nil
        else
            savedPosition = HumanoidRootPart.Position
-           HumanoidRootPart.CFrame = CFrame.new(825.290, 98.000, 2222.277)
+           local targetPos = Vector3.new(874.001, 39.590, 2348.169)
+           local randomOffset = math.random(-3, 3)
+           targetPos = targetPos + Vector3.new(randomOffset, 0, randomOffset)
+           HumanoidRootPart.CFrame = CFrame.new(targetPos)
+           task.wait(0.05)
+           HumanoidRootPart.CFrame = CFrame.new(targetPos + Vector3.new(0, 0, 2))
            ShowNotification("Neutral Zone", "Teleported to neutral zone", 3)
        end
    end
