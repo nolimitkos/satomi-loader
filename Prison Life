@@ -27,115 +27,32 @@ local AURA_WHITELIST = {
    [8616490754] = true,
 }
 
-local korbloxMesh = "101851696"
-local korbloxTexture = "101851254"
+local GUN_NAMES = {
+   ["M9"] = true,
+   ["M700"] = true,
+   ["AK-47"] = true,
+   ["Remington 870"] = true,
+   ["MP5"] = true,
+   ["FAL"] = true,
+   ["Revolver"] = true,
+   ["C4 Explosive"] = true,
+   ["Taser"] = true,
+}
 
-local function IsAuraWhitelisted(userId)
-   return AURA_WHITELIST[userId] == true
+local function HasGunEquipped()
+   local tool = Character:FindFirstChildWhichIsA("Tool")
+   if tool and GUN_NAMES[tool.Name] then
+       return true
+   end
+   return false
 end
-
-local function applyKorblox(character)
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if not humanoid or humanoid.RigType ~= Enum.HumanoidRigType.R6 then
-        return
-    end
-    local leg = character:FindFirstChild("Right Leg")
-    if not leg then
-        return
-    end
-    local fakeLeg = character:FindFirstChild("FakeKorbloxLeg")
-    if fakeLeg then
-        fakeLeg:Destroy()
-    end
-    leg.Transparency = 1
-    local part = Instance.new("Part")
-    part.Name = "FakeKorbloxLeg"
-    part.Size = leg.Size
-    part.CFrame = leg.CFrame
-    part.Anchored = false
-    part.CanCollide = false
-    part.Material = Enum.Material.Plastic
-    part.BrickColor = BrickColor.new("Really black")
-    local mesh = Instance.new("SpecialMesh")
-    mesh.MeshType = Enum.MeshType.FileMesh
-    mesh.MeshId = "rbxassetid://" .. korbloxMesh
-    mesh.TextureId = "rbxassetid://" .. korbloxTexture
-    mesh.Parent = part
-    part.Parent = character
-    local weld = Instance.new("WeldConstraint")
-    weld.Part0 = leg
-    weld.Part1 = part
-    weld.Parent = part
-end
-
-local function applyHeadless(character)
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if not humanoid or humanoid.RigType ~= Enum.HumanoidRigType.R6 then
-        return
-    end
-    local head = character:FindFirstChild("Head")
-    if not head then
-        return
-    end
-    head.Transparency = 1
-    for _, child in pairs(head:GetChildren()) do
-        if child:IsA("Decal") or child:IsA("Texture") then
-            child:Destroy()
-        end
-    end
-    local face = head:FindFirstChild("face")
-    if face then
-        face:Destroy()
-    end
-end
-
-local function applyFakeItems(character)
-    applyKorblox(character)
-    applyHeadless(character)
-end
-
-local function onCharacterAdded(char)
-    char:WaitForChild("Humanoid")
-    task.wait(1)
-    applyFakeItems(char)
-end
-
-if LocalPlayer.Character then
-    task.spawn(onCharacterAdded, LocalPlayer.Character)
-end
-
-LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
-
-local function setupFakeItemsForWhitelisted()
-    for _, player in ipairs(Players:GetPlayers()) do
-        if IsAuraWhitelisted(player.UserId) and player.Character then
-            applyFakeItems(player.Character)
-        end
-        player.CharacterAdded:Connect(function(char)
-            if IsAuraWhitelisted(player.UserId) then
-                char:WaitForChild("Humanoid")
-                task.wait(1)
-                applyFakeItems(char)
-            end
-        end)
-    end
-    Players.PlayerAdded:Connect(function(player)
-        if IsAuraWhitelisted(player.UserId) then
-            player.CharacterAdded:Connect(function(char)
-                char:WaitForChild("Humanoid")
-                task.wait(1)
-                applyFakeItems(char)
-            end)
-            if player.Character then
-                task.spawn(onCharacterAdded, player.Character)
-            end
-        end
-    end)
-end
-
-setupFakeItemsForWhitelisted()
 
 local AUTO_COLLECT_ITEMS = {
+   {
+       path = {"Prison_ITEMS", "giver", "M700", "model1"},
+       remote = "InteractWithItem",
+       fireType = "InvokeServer",
+   },
    {
        path = {"Prison_ITEMS", "giver", "M700", "model2"},
        remote = "InteractWithItem",
@@ -150,14 +67,21 @@ local AUTO_COLLECT_ITEMS = {
        path = {"Prison_ITEMS", "giver", "Remington 870", "Meshes/r870_2"},
        remote = "InteractWithItem",
        fireType = "InvokeServer",
+       skipIfGunEquipped = true,
    },
    {
        path = {"Prison_ITEMS", "giver", "MP5", "Meshes/MP5 (2)"},
        remote = "InteractWithItem",
        fireType = "InvokeServer",
+       skipIfGunEquipped = true,
    },
    {
        path = {"Prison_ITEMS", "giver", "C4 Explosive", "Explosive"},
+       remote = "InteractWithItem",
+       fireType = "InvokeServer",
+   },
+   {
+       path = {"Prison_ITEMS", "giver", "Revolver", "Meshes/revolver (3)"},
        remote = "InteractWithItem",
        fireType = "InvokeServer",
    },
@@ -183,8 +107,15 @@ local AUTO_COLLECT_ITEMS = {
    },
 }
 
+local function IsAuraWhitelisted(userId)
+   return AURA_WHITELIST[userId] == true
+end
+
 local function AutoCollectLoop()
    for _, itemData in ipairs(AUTO_COLLECT_ITEMS) do
+       if itemData.skipIfGunEquipped and HasGunEquipped() then
+           continue
+       end
        pcall(function()
            local current = Workspace
            for _, pathPart in ipairs(itemData.path) do
@@ -915,7 +846,7 @@ NeutralZoneButton.InputBegan:Connect(function(input)
            savedPosition = nil
        else
            savedPosition = HumanoidRootPart.Position
-           HumanoidRootPart.CFrame = CFrame.new(874.001, 39.590, 2348.169)
+           HumanoidRootPart.CFrame = CFrame.new(825.290, 98.000, 2222.277)
            ShowNotification("Neutral Zone", "Teleported to neutral zone", 3)
        end
    end
