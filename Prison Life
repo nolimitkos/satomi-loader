@@ -25,12 +25,7 @@ local autoArrestEnabled = false
 local auraConnection = nil
 local autoArrestConnection = nil
 
-local AURA_WHITELIST = {
-    [10832085518] = true,
-    [8616490754] = true,
-}
-
-local ARREST_WHITELIST = {
+local WHITELIST = {
     [10832085518] = true,
     [8616490754] = true,
 }
@@ -40,6 +35,10 @@ local ArrestRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Arr
 local ArrestRange = 7.5
 local ArrestCooldown = 7
 local LastArrest = 0
+
+local function IsWhitelisted(userId)
+    return WHITELIST[userId] == true
+end
 
 local function FindGunGiver(gunName)
     local prisonItems = Workspace:FindFirstChild("Prison_ITEMS")
@@ -117,10 +116,6 @@ local function AutoCollectLoop()
     AutoCollectItem("M700", "giver")
 end
 
-local function IsArrestWhitelisted(player)
-    return ARREST_WHITELIST[player.UserId] == true
-end
-
 local function GetHandcuffsTool()
     local char = LocalPlayer.Character
     if not char then return nil end
@@ -130,7 +125,7 @@ end
 
 local function IsValidArrestTarget(player, character)
     if player == LocalPlayer then return false end
-    if IsArrestWhitelisted(player) then return false end
+    if IsWhitelisted(player.UserId) then return false end
     
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if not humanoid or humanoid.Health <= 0 then return false end
@@ -565,7 +560,7 @@ local function GetClosestPlayer()
 
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
-            if IsAuraWhitelisted(player.UserId) then
+            if IsWhitelisted(player.UserId) then
                 continue
             end
             local targetHRP = player.Character:FindFirstChild("HumanoidRootPart")
