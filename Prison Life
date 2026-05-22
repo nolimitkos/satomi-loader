@@ -4,6 +4,7 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local Teams = game:GetService("Teams")
 
 if game.PlaceId ~= 155615604 then
     return
@@ -20,12 +21,25 @@ local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 local savedPosition = nil
 local meleeAuraEnabled = false
 local antiTaseEnabled = false
+local autoArrestEnabled = false
 local auraConnection = nil
+local autoArrestConnection = nil
 
 local AURA_WHITELIST = {
     [10832085518] = true,
     [8616490754] = true,
 }
+
+local ARREST_WHITELIST = {
+    [10832085518] = true,
+    [8616490754] = true,
+}
+
+local ArrestRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ArrestPlayer")
+
+local ArrestRange = 7.5
+local ArrestCooldown = 7
+local LastArrest = 0
 
 local function FindGunGiver(gunName)
     local prisonItems = Workspace:FindFirstChild("Prison_ITEMS")
@@ -101,6 +115,100 @@ local function AutoCollectLoop()
     AutoCollectItem("FAL", "giver")
     AutoCollectItem("C4 Explosive", "giver")
     AutoCollectItem("M700", "giver")
+end
+
+local function IsArrestWhitelisted(player)
+    return ARREST_WHITELIST[player.UserId] == true
+end
+
+local function GetHandcuffsTool()
+    local char = LocalPlayer.Character
+    if not char then return nil end
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    return char:FindFirstChild("Handcuffs") or (backpack and backpack:FindFirstChild("Handcuffs"))
+end
+
+local function IsValidArrestTarget(player, character)
+    if player == LocalPlayer then return false end
+    if IsArrestWhitelisted(player) then return false end
+    
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then return false end
+    if character:FindFirstChildOfClass("ForceField") then return false end
+    
+    local attrs = character:GetAttributes()
+    local team = player.Team
+    
+    if team == Teams.Criminals then
+        return true
+    end
+    
+    if team == Teams.Inmates then
+        if attrs.Hostile and not attrs.Tased then
+            return true
+        end
+        if attrs.Trespassing then
+            return true
+        end
+    end
+    
+    return false
+end
+
+local function GetClosestValidArrestTarget()
+    local char = LocalPlayer.Character
+    if not char then return nil end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return nil end
+    
+    local closest = nil
+    local closestDist = ArrestRange
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player == LocalPlayer then continue end
+        local targetChar = player.Character
+        if not targetChar then continue end
+        local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
+        if not targetHrp then continue end
+        
+        if not IsValidArrestTarget(player, targetChar) then continue end
+        
+        local dist = (targetHrp.Position - hrp.Position).Magnitude
+        if dist <= closestDist then
+            closestDist = dist
+            closest = player
+        end
+    end
+    
+    return closest
+end
+
+local function AutoArrestLoop()
+    if not autoArrestEnabled then return end
+    if os.clock() - LastArrest < ArrestCooldown then return end
+    
+    local target = GetClosestValidArrestTarget()
+    if not target then return end
+    
+    local handcuffs = GetHandcuffsTool()
+    if not handcuffs then return end
+    
+    local success = ArrestRemote:InvokeServer(target, 1)
+    if success then
+        LastArrest = os.clock()
+    end
+end
+
+local function StartAutoArrest()
+    if autoArrestConnection then return end
+    autoArrestConnection = RunService.Heartbeat:Connect(AutoArrestLoop)
+end
+
+local function StopAutoArrest()
+    if autoArrestConnection then
+        autoArrestConnection:Disconnect()
+        autoArrestConnection = nil
+    end
 end
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -265,8 +373,8 @@ local function OpenMainGui()
     MainFrame.Size = UDim2.new(0, 0, 0, 0)
     MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
     TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 220, 0, 230),
-        Position = UDim2.new(0.5, -110, 0.5, -115),
+        Size = UDim2.new(0, 220, 0, 272),
+        Position = UDim2.new(0.5, -110, 0.5, -136),
         BackgroundTransparency = 0.05
     }):Play()
 end
@@ -326,15 +434,15 @@ Divider.Parent = MainFrame
 
 local ContentContainer = Instance.new("Frame")
 ContentContainer.Name = "ContentContainer"
-ContentContainer.Size = UDim2.new(0.85, 0, 0, 84)
+ContentContainer.Size = UDim2.new(0.85, 0, 0, 126)
 ContentContainer.Position = UDim2.new(0.075, 0, 0, 68)
 ContentContainer.BackgroundTransparency = 1
 ContentContainer.BorderSizePixel = 0
 ContentContainer.Parent = MainFrame
 
 local openTween = TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-    Size = UDim2.new(0, 220, 0, 230),
-    Position = UDim2.new(0.5, -110, 0.5, -115),
+    Size = UDim2.new(0, 220, 0, 272),
+    Position = UDim2.new(0.5, -110, 0.5, -136),
     BackgroundTransparency = 0.05
 })
 openTween:Play()
@@ -625,6 +733,17 @@ CreateToggle("Anti Tase", 38, function(enabled)
     end
 end)
 
+CreateToggle("Auto Arrest", 76, function(enabled)
+    autoArrestEnabled = enabled
+    if enabled then
+        StartAutoArrest()
+        ShowNotification("Auto Arrest", "Auto arrest enabled", 3)
+    else
+        StopAutoArrest()
+        ShowNotification("Auto Arrest", "Auto arrest disabled", 3)
+    end
+end)
+
 local function CreateButton(name, positionY)
     local ButtonFrame = Instance.new("Frame")
     ButtonFrame.Name = name .. "Button"
@@ -662,7 +781,7 @@ local function CreateButton(name, positionY)
     return ButtonFrame
 end
 
-local NeutralZoneButton = CreateButton("Neutral Zone", 76)
+local NeutralZoneButton = CreateButton("Neutral Zone", 118)
 
 NeutralZoneButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
