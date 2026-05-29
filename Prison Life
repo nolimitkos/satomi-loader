@@ -24,6 +24,10 @@ local antiTaseEnabled = false
 local autoArrestEnabled = false
 local auraConnection = nil
 local autoArrestConnection = nil
+local antiTaseDummyEvent = nil
+local antiTaseMovementConnection = nil
+local antiTaseEventConnection = nil
+local antiTaseIsMoving = false
 
 local WHITELIST = {
     [10832085518] = true,
@@ -698,13 +702,43 @@ local function EnableAntiTase()
     if not GunRemotes then return end
     local PlayerTased = GunRemotes:FindFirstChild("PlayerTased")
     if not PlayerTased then return end
-    local DummyEvent = Instance.new("RemoteEvent")
-    DummyEvent.Name = "PlayerTased"
-    DummyEvent.Parent = GunRemotes
+
+    antiTaseDummyEvent = Instance.new("RemoteEvent")
+    antiTaseDummyEvent.Name = "PlayerTased"
+    antiTaseDummyEvent.Parent = GunRemotes
     PlayerTased:Destroy()
-    DummyEvent.OnClientEvent:Connect(function()
-        return
+
+    antiTaseMovementConnection = RunService.Heartbeat:Connect(function()
+        antiTaseIsMoving = Humanoid.MoveDirection.Magnitude > 0.01
     end)
+
+    antiTaseEventConnection = antiTaseDummyEvent.OnClientEvent:Connect(function()
+        if antiTaseIsMoving then
+            return
+        end
+    end)
+end
+
+local function DisableAntiTase()
+    if antiTaseMovementConnection then
+        antiTaseMovementConnection:Disconnect()
+        antiTaseMovementConnection = nil
+    end
+    if antiTaseEventConnection then
+        antiTaseEventConnection:Disconnect()
+        antiTaseEventConnection = nil
+    end
+    if antiTaseDummyEvent then
+        local GunRemotes = ReplicatedStorage:FindFirstChild("GunRemotes")
+        if GunRemotes then
+            local realEvent = Instance.new("RemoteEvent")
+            realEvent.Name = "PlayerTased"
+            realEvent.Parent = GunRemotes
+        end
+        antiTaseDummyEvent:Destroy()
+        antiTaseDummyEvent = nil
+    end
+    antiTaseIsMoving = false
 end
 
 CreateToggle("Melee-Aura", 0, function(enabled)
@@ -724,7 +758,8 @@ CreateToggle("Anti Tase", 38, function(enabled)
         EnableAntiTase()
         ShowNotification("Anti Tase", "Tase protection enabled", 3)
     else
-        ShowNotification("Anti Tase", "Rejoin to disable fully", 3)
+        DisableAntiTase()
+        ShowNotification("Anti Tase", "Tase protection disabled", 3)
     end
 end)
 
