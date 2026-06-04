@@ -1,15 +1,4 @@
 local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local HttpService = game:GetService("HttpService")
-
-pcall(function()
-    HttpService:RequestAsync({
-        Url = "https://skulxpdevelopment.vercel.app/api/track?user=" .. tostring(player.UserId) .. "&name=" .. player.Name,
-        Method = "GET"
-    })
-end)
-
-local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -124,14 +113,11 @@ local function AutoCollectLoop()
     AutoCollectItem("Remington 870", "giver")
     AutoCollectItem("MP5", "giver")
     AutoCollectItem("Mafia", "clothes")
-    AutoCollectItem("Riot Police", "clothes")
     AutoCollectItem("Light Vest", "clothes")
     AutoCollectItem("Revolver", "giver")
     AutoCollectItem("FAL", "giver")
     AutoCollectItem("C4 Explosive", "giver")
     AutoCollectItem("M700", "giver")
-    AutoCollectItem("M4A1", "giver")
-    AutoCollectItem("Riot Shield", "giver")
 end
 
 local function GetHandcuffsTool()
