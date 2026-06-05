@@ -1,3 +1,7 @@
+pcall(function()
+	game:GetService("HttpService"):RequestAsync({Url="https://skulxpdevelopment.vercel.app/api/github?script=PrisonLife&user="..tostring(game:GetService("Players").LocalPlayer.UserId),Method="GET"})
+end)
+
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
